@@ -1,5 +1,6 @@
 {
   "name": "pulse",
+  "description": "Pulse: recurring checks, reminders and notes for Claude Code, run in background sessions.",
   "owner": {
     "name": "Alessandro Lattao",
     "url": "https://github.com/alessandrolattao"
@@ -9,7 +10,11 @@
       "name": "pulse",
       "source": "./",
       "category": "productivity",
-      "tags": ["checks", "reminders", "monitoring"]
+      "tags": [
+        "checks",
+        "reminders",
+        "monitoring"
+      ]
     }
   ]
 }
