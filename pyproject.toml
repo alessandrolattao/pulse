@@ -1,0 +1,72 @@
+[project]
+name = "pulse"
+version = "0.1.0"
+description = "Recurring checks and reminders for Claude Code, run in background sessions that never touch your conversation."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Alessandro Lattao", email = "me@alessandrolattao.com" }]
+# Runtime is the standard library only: the plugin runs the code straight from src/.
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "ruff>=0.17.1",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+src = ["src", "tests"]
+extend-include = ["bin/pulse"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM812",  # trailing commas are the formatter's job (conflicts with ruff format)
+    "TRY003",  # error messages are written where the error happens, not in subclasses
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",     # pytest asserts
+    "S603",     # tests run the CLI and git as subprocesses on purpose
+    "S607",     # git from PATH, as the user runs it
+    "PLR2004",  # literal expected values read best inline
+    "D100",     # test modules are named after what they test
+    "D103",     # test names are their documentation
+    "INP001",   # tests/ is a pytest rootdir, not a package
+]
+"bin/pulse" = ["INP001"]  # an executable script, not a module of a package
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+mypy_path = ["src", "tests"]
+files = ["src", "tests", "bin/pulse"]
+warn_unreachable = true
+enable_error_code = [
+    "ignore-without-code",
+    "redundant-expr",
+    "truthy-bool",
+    "truthy-iterable",
+    "possibly-undefined",
+    "explicit-override",
+    "unused-awaitable",
+    "mutable-override",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = ["-ra", "--strict-markers"]

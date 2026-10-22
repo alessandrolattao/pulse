@@ -1,0 +1,15 @@
+{
+  "name": "pulse",
+  "owner": {
+    "name": "Alessandro Lattao",
+    "url": "https://github.com/alessandrolattao"
+  },
+  "plugins": [
+    {
+      "name": "pulse",
+      "source": "./",
+      "category": "productivity",
+      "tags": ["checks", "reminders", "monitoring"]
+    }
+  ]
+}

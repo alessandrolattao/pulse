@@ -1,0 +1,13 @@
+{
+  "name": "pulse",
+  "displayName": "Pulse",
+  "version": "0.1.0",
+  "description": "Recurring checks and reminders that run in background Claude Code sessions and notify you, without ever touching your conversation.",
+  "author": {
+    "name": "Alessandro Lattao",
+    "url": "https://github.com/alessandrolattao"
+  },
+  "homepage": "https://github.com/alessandrolattao/pulse",
+  "repository": "https://github.com/alessandrolattao/pulse",
+  "keywords": ["checks", "reminders", "monitoring", "background", "notifications"]
+}

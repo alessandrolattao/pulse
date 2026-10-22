@@ -1,0 +1,11 @@
+#!/usr/bin/env -S python3 -I
+"""Entry point of the `pulse` command: the plugin puts bin/ on the Bash tool's PATH."""
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+from pulse.cli import main
+
+sys.exit(main())
