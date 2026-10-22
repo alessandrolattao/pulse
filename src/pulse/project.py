@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Which project a directory belongs to."""
 
 from __future__ import annotations

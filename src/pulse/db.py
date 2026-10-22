@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The SQLite file: schema, and the upgrades of a db created by an older version."""
 
 from __future__ import annotations

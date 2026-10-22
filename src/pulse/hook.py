@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """`pulse tick`: what the hooks run on SessionStart, UserPromptSubmit and Stop."""
 
 from __future__ import annotations

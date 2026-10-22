@@ -135,4 +135,6 @@ The code is a small standard-library package under `src/pulse`, run by
 
 ## License
 
-To be decided.
+Pulse is free software, released under the [GNU General Public License v3.0 or later](LICENSE).
+You can use it, change it and share it, also at work and for money, as long as what
+you distribute stays under the same license, with its source.

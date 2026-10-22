@@ -1,4 +1,6 @@
 #!/usr/bin/env -S python3 -I
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Entry point of the `pulse` command: the plugin puts bin/ on the Bash tool's PATH."""
 
 import sys

@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Where Pulse keeps its data and what it runs."""
 
 from __future__ import annotations

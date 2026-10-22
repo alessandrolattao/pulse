@@ -9,5 +9,13 @@
   },
   "homepage": "https://github.com/alessandrolattao/pulse",
   "repository": "https://github.com/alessandrolattao/pulse",
-  "keywords": ["checks", "reminders", "monitoring", "background", "notifications"]
+  "keywords": [
+    "checks",
+    "reminders",
+    "monitoring",
+    "background",
+    "notifications"
+  ],
+  "license": "GPL-3.0-or-later",
+  "icon": "assets/robot.png"
 }

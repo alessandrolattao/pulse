@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Shared fixtures: a throwaway db, a fake `claude`, and no desktop notifications."""
 
 from __future__ import annotations

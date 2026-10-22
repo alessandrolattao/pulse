@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """What is due, and taking it: the only place that decides when a check runs."""
 
 from __future__ import annotations

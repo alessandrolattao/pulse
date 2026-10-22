@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Standard five-field cron expressions, evaluated in local time.
 
 `minute hour day-of-month month day-of-week`, with `*`, lists (`1,15`),

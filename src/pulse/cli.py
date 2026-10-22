@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The `pulse` command: manage checks and record outcomes. Every subcommand but `tick` prints JSON."""
 
 from __future__ import annotations

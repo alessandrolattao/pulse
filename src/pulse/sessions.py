@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The background sessions that run the checks: launching, recognising, removing."""
 
 from __future__ import annotations

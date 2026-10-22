@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Timestamps as Pulse stores them: UTC, ISO 8601, to the second."""
 
 from __future__ import annotations

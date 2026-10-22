@@ -5,6 +5,8 @@ description = "Recurring checks and reminders for Claude Code, run in background
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Alessandro Lattao", email = "me@alessandrolattao.com" }]
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 # Runtime is the standard library only: the plugin runs the code straight from src/.
 dependencies = []
 

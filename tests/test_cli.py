@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The `pulse` command as Claude and the check sessions run it: bin/pulse in a subprocess."""
 
 from __future__ import annotations

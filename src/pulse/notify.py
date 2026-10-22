@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Desktop notifications, for the outcomes the user should see at once."""
 
 from __future__ import annotations

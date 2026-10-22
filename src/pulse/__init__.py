@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Pulse: recurring checks and reminders for Claude Code, run in background sessions.
 
 The requests (`checks`) and the log of every run (`runs`) live in one SQLite

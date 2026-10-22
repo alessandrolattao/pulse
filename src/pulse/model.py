@@ -1,3 +1,5 @@
+# Copyright (C) 2026 Alessandro Lattao
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The vocabulary of Pulse: scopes, cadences, kinds, outcomes and a claimed run."""
 
 from __future__ import annotations
