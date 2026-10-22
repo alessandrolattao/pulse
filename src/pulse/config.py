@@ -16,7 +16,11 @@ BIN = ROOT / "bin" / "pulse"
 ICON = ROOT / "assets" / "robot.png"
 
 TITLE = "Pulse"
+PLUGIN = "pulse"
+"""The plugin's name, as `.claude-plugin/plugin.json` declares it."""
 CHECK_AGENT = "pulse-check"
+CHECK_AGENT_REF = f"{PLUGIN}:{CHECK_AGENT}"
+"""How `claude --agent` finds it: a plugin agent answers only to its plugin-scoped name."""
 CHECK_MODEL = "sonnet"
 
 

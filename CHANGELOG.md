@@ -11,6 +11,13 @@ All notable changes to Pulse are documented here. The format follows
 - Every push runs the checks; a `vX.Y.Z` tag on `main` publishes the release
   with its notes from this changelog.
 
+### Fixed
+
+- Check sessions start as the `pulse:pulse-check` agent. `--agent pulse-check`
+  named no agent, since a plugin agent answers only to its plugin-scoped
+  name, so the sessions ran on the default template, without the read only
+  rules and tool limits of the check agent.
+
 ## [0.2.0] - 2026-10-22
 
 ### Changed

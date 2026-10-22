@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from pulse.config import BIN, CHECK_AGENT, Config
+from pulse.config import BIN, CHECK_AGENT, CHECK_AGENT_REF, Config
 from pulse.runs import finish
 from pulse.schedule import claim
 from pulse.sessions import check_prompt, is_check_session, launch, remove_finished, start
@@ -40,7 +40,7 @@ def test_launch_starts_a_named_check_session_and_keeps_its_id(
         "-n",
         "Pulse · PR 652 released",
         "--agent",
-        CHECK_AGENT,
+        CHECK_AGENT_REF,
         "--model",
         "sonnet",
         "--no-chrome",
@@ -108,7 +108,7 @@ def test_a_failed_launch_becomes_an_error_outcome(
     assert "agent view is off" in row["summary"]
 
 
-@pytest.mark.parametrize("agent", [CHECK_AGENT, f"pulse:{CHECK_AGENT}"])
+@pytest.mark.parametrize("agent", [CHECK_AGENT, CHECK_AGENT_REF])
 def test_check_sessions_are_recognised_by_agent(conn: sqlite3.Connection, agent: str) -> None:
     assert is_check_session(conn, {"agent_type": agent})
 

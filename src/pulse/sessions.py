@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from pulse.clock import parse
-from pulse.config import BIN, CHECK_AGENT, CHECK_MODEL, TITLE
+from pulse.config import BIN, CHECK_AGENT, CHECK_AGENT_REF, CHECK_MODEL, TITLE
 from pulse.model import FINAL_OUTCOMES, KEEP_SESSION, SYSTEM, Kind, Outcome
 from pulse.runs import finish
 
@@ -77,7 +77,7 @@ def launch(conn: sqlite3.Connection, config: Config, run: ClaimedRun, cwd: str, 
         "-n",
         f"{TITLE} · {run.name}",
         "--agent",
-        CHECK_AGENT,
+        CHECK_AGENT_REF,
         "--model",
         CHECK_MODEL,
         "--chrome" if run.browser else "--no-chrome",

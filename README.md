@@ -40,7 +40,7 @@ conversation you are having, so the model stays on your work.
         │
         ▼
   hook: pulse tick ──── due? ────────────────▶ claude --bg -n "Pulse · <name>"
-        │                                          --agent pulse-check
+        │                                          --agent pulse:pulse-check
         │                                          (read only, Sonnet,
         │                                           the saved method)
         │                                                │
