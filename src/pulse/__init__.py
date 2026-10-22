@@ -9,4 +9,4 @@ file. Every check runs in its own background session (`claude --bg`, agent
 a hook `systemMessage`, which reaches the user and not the model.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
