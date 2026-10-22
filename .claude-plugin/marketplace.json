@@ -13,7 +13,10 @@
       "tags": [
         "checks",
         "reminders",
-        "monitoring"
+        "monitoring",
+        "scheduler",
+        "notifications",
+        "productivity"
       ]
     }
   ]

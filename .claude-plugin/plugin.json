@@ -12,9 +12,14 @@
   "keywords": [
     "checks",
     "reminders",
+    "notes",
     "monitoring",
+    "scheduler",
+    "cron",
+    "notifications",
     "background",
-    "notifications"
+    "productivity",
+    "automation"
   ],
   "license": "GPL-3.0-or-later",
   "icon": "assets/robot.png"

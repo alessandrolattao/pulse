@@ -2,15 +2,22 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
+  # Pull requests from forks; the repository's own branches are covered by push.
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   checks:
-    name: Lint, types and tests (Python ${{ matrix.python }})
+    name: Python ${{ matrix.python }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -26,3 +33,18 @@ jobs:
       - run: uv run ruff check .
       - run: uv run mypy
       - run: uv run pytest
+      - run: uv run scripts/release_check.py check
+
+  # The one check the main branch ruleset requires: green only when every Python is.
+  ci:
+    name: CI
+    if: always()
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: All checks passed
+        env:
+          RESULT: ${{ needs.checks.result }}
+        run: |
+          echo "checks: $RESULT"
+          [ "$RESULT" = "success" ] || [ "$RESULT" = "skipped" ]

@@ -55,7 +55,7 @@ docstring-code-format = true
 python_version = "3.11"
 strict = true
 mypy_path = ["src", "tests"]
-files = ["src", "tests", "bin/pulse"]
+files = ["src", "tests", "scripts", "bin/pulse"]
 warn_unreachable = true
 enable_error_code = [
     "ignore-without-code",

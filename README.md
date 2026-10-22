@@ -135,6 +135,21 @@ uv run pytest
 The code is a small standard-library package under `src/pulse`, run by
 `bin/pulse`. Ruff runs with every rule enabled and mypy in strict mode.
 
+## Releasing
+
+`main` changes only through pull requests, and every push runs the checks
+(format, lint, types, tests on Python 3.11 to 3.14, version consistency).
+
+1. In a pull request, set the new version in `pyproject.toml`,
+   `src/pulse/__init__.py` and `.claude-plugin/plugin.json`, and move the
+   `Unreleased` notes of `CHANGELOG.md` under it.
+2. Once it is merged, tag `main` and push the tag:
+   `git tag -a v1.2.3 -m "Pulse 1.2.3" && git push origin v1.2.3`.
+3. The release workflow checks that the tag is on `main` and matches the
+   version and the changelog, runs the checks again, and publishes the GitHub
+   release with the changelog notes. Installed copies pick it up with
+   `claude plugin marketplace update pulse` and `claude plugin update pulse@pulse`.
+
 ## License
 
 Pulse is free software, released under the [GNU General Public License v3.0 or later](LICENSE).
