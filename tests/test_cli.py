@@ -86,6 +86,7 @@ def test_add_stores_the_schedule(tmp_path: Path, options: list[str], schedule: s
     [
         (["--kind", "check", "--daily"], "trial run worked"),
         (["--kind", "note", "--daily", "--browser"], "a note runs no session"),
+        (["--kind", "note", "--daily", "--reuse-session"], "a note runs no session"),
         ([*CHECK, "--every", "1m"], "shortest interval"),
         ([*CHECK, "--cron", "0 9 * *"], "5 fields"),
         ([*CHECK, "--at", "tomorrow"], "a time is written like"),
@@ -115,6 +116,37 @@ def test_update_changes_the_configuration_only(tmp_path: Path) -> None:
     assert updated.returncode == 0, updated.stdout
     view = output(updated)
     assert (view["method"], view["browser"], view["schedule"]) == ("gh api repos/x/y/releases", True, "daily")
+
+
+def test_add_stores_the_session_reuse(tmp_path: Path) -> None:
+    added = add(tmp_path, tmp_path / "pulse.db", *CHECK, "--daily", "--reuse-session")
+
+    assert added.returncode == 0, added.stdout
+    assert output(added)["reuse_session"] is True
+
+
+@pytest.mark.parametrize(
+    ("options", "kept"),
+    [
+        (["--browser"], None),
+        (["--no-reuse-session"], None),
+        (["--no-browser"], "a1b2c3d4"),
+        (["--method", "gh api repos/x/y/releases"], "a1b2c3d4"),
+    ],
+)
+def test_the_kept_session_goes_with_a_new_browser_or_without_reuse(
+    tmp_path: Path, options: list[str], kept: str | None
+) -> None:
+    db = tmp_path / "pulse.db"
+    add(tmp_path, db, *CHECK, "--daily", "--reuse-session")
+    conn = connect(db)
+    conn.execute("UPDATE checks SET kept_session = 'a1b2c3d4'")
+
+    updated = run(["update", "1", *options], tmp_path, db)
+
+    assert updated.returncode == 0, updated.stdout
+    assert conn.execute("SELECT kept_session FROM checks").fetchone()[0] == kept
+    conn.close()
 
 
 def test_list_shows_the_checks_in_scope(tmp_path: Path) -> None:

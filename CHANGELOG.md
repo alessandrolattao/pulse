@@ -10,6 +10,13 @@ All notable changes to Pulse are documented here. The format follows
 
 - Every push runs the checks; a `vX.Y.Z` tag on `main` publishes the release
   with its notes from this changelog.
+- A check or reminder can reuse its session (`--reuse-session`, asked when
+  it is set up): every run continues the same background session, with
+  `claude --bg --resume`, so it sees what the earlier runs found. Between
+  runs the session is stopped, keeping its conversation; it is removed once
+  the check no longer keeps it. A new browser setting starts a new session.
+- Setting up a request asks the questions with fixed answers (browser,
+  session reuse, scope) as options to pick.
 
 ### Fixed
 

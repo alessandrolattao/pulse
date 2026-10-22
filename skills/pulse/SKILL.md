@@ -23,6 +23,10 @@ pulse --db "${CLAUDE_PLUGIN_DATA}/pulse.db" <command>
 Never save a check or a reminder straight away. A saved request carries what
 worked, so that the background session follows it instead of guessing.
 
+Ask every question that has a fixed set of answers (the browser, reusing the
+session, the scope when it is unclear) with the `AskUserQuestion` tool, so
+that the user picks an option instead of typing one.
+
 1. **Understand it.** What to look at, when, and what counts as worth telling
    the user. Ask only what you cannot infer.
 2. **Try it now, read only.** Do the check yourself in this session, as the
@@ -34,12 +38,18 @@ worked, so that the background session follows it instead of guessing.
    reachable only through a website the user is logged into, ask: "this check
    needs the browser, through Claude in Chrome, read only: do you want to use
    it?" Use the browser only after a yes, and never decide it alone.
-4. **Save it once it works**, with what the trial proved:
+4. **Ask whether to reuse the session**, for a check or a reminder that runs
+   more than once: "do you want every run to continue the same background
+   session?" Yes: each run sees what the earlier ones found, and can tell
+   what changed. No: every run starts in a new session, knowing nothing of
+   the earlier ones.
+5. **Save it once it works**, with what the trial proved:
    - `--method`: the steps that worked, in order, with the exact commands,
      endpoints or pages, and how to tell `found` from `ok`;
    - `--requires`: each tool and login it depends on, with the command that
      checks or renews it;
-   - `--browser` only if the user said yes.
+   - `--browser` only if the user said yes;
+   - `--reuse-session` only if the user said yes.
 
 A plain reminder with nothing to look into ("remind me tomorrow at 9 to call
 Marco") is a `note`: no trial, no method, no session. It is simply told to the
@@ -49,10 +59,10 @@ user when due.
 
 | What | Command |
 | --- | --- |
-| Save a check | `add --scope project\|system --kind check --name "<few words>" <schedule> --method "…" --requires "…" [--browser] "<text>"` |
+| Save a check | `add --scope project\|system --kind check --name "<few words>" <schedule> --method "…" --requires "…" [--browser] [--reuse-session] "<text>"` |
 | Save a reminder (speaks once, when a condition holds) | same, with `--kind reminder` |
 | Save a note (just tell the user) | `add --scope … --kind note --name "…" <schedule> "<what to tell>"` |
-| Change what a check does or needs | `update <check_id> [--name …] [--text …] [--method …] [--requires …] [--browser\|--no-browser]` |
+| Change what a check does or needs | `update <check_id> [--name …] [--text …] [--method …] [--requires …] [--browser\|--no-browser] [--reuse-session\|--no-reuse-session]` |
 | See what is watched | `list` (this project and the system scope), `list --all` |
 | Stop one | `remove <check_id>` (deactivates it; its log stays) |
 | How it went | `log [--check-id N] [--limit N] [--all]` |

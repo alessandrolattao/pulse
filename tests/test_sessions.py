@@ -19,8 +19,31 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+FULL_ID = "a1b2c3d4-0000-4000-8000-000000000000"
+KEPT = json.dumps([{"id": "a1b2c3d4", "sessionId": FULL_ID, "state": "done"}])
+
+
 def calls(log: Path) -> list[dict[str, object]]:
     return [json.loads(line) for line in log.read_text().splitlines()]
+
+
+def argvs(log: Path) -> list[list[str]]:
+    found: list[list[str]] = []
+    for call in calls(log):
+        argv = call["argv"]
+        assert isinstance(argv, list)
+        found.append([str(part) for part in argv])
+    return found
+
+
+def cleanups(log: Path) -> list[list[str]]:
+    return [argv for argv in argvs(log) if argv[0] in {"stop", "rm"}]
+
+
+def kept_session(conn: sqlite3.Connection, check_id: int) -> str | None:
+    row = conn.execute("SELECT kept_session FROM checks WHERE check_id = ?", (check_id,)).fetchone()
+    kept: str | None = row[0]
+    return kept
 
 
 def test_launch_starts_a_named_check_session_and_keeps_its_id(
@@ -142,3 +165,103 @@ def test_sessions_are_removed_once_seen_ok_or_old(conn: sqlite3.Connection, conf
 
     assert len(removed_now) == 1
     assert len(removed_later) == 2
+
+
+def test_a_reused_check_keeps_the_session_of_its_first_run(
+    conn: sqlite3.Connection, config: Config, tmp_path: Path
+) -> None:
+    check = add_check(conn, reuse_session=True)
+    at = local(2026, 10, 22, 9)
+    [run] = claim(conn, PROJECT, at)
+
+    launch(conn, config, run, str(tmp_path), at)
+
+    [argv] = argvs(tmp_path / "claude.log")
+    assert argv[:2] == ["--bg", "-n"]
+    assert kept_session(conn, check) == "a1b2c3d4"
+
+
+def test_the_next_run_resumes_the_kept_session_as_it_is(
+    conn: sqlite3.Connection, config: Config, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_CLAUDE_AGENTS", KEPT)
+    add_check(conn, reuse_session=True)
+    first_at = local(2026, 10, 22, 9)
+    [first] = claim(conn, PROJECT, first_at)
+    launch(conn, config, first, str(tmp_path), first_at)
+    finish(conn, config, run_id=first.run_id, outcome="ok", summary="fine", at=first_at)
+    next_at = local(2026, 10, 23, 9)
+    [second] = claim(conn, PROJECT, next_at)
+
+    launch(conn, config, second, str(tmp_path), next_at)
+
+    assert argvs(tmp_path / "claude.log")[1:] == [
+        ["agents", "--json", "--all"],
+        ["stop", "a1b2c3d4"],
+        ["--bg", "--resume", FULL_ID, check_prompt(config, second)],
+    ]
+    rows = conn.execute("SELECT run_id, session_id, session_removed FROM runs ORDER BY run_id").fetchall()
+    assert [tuple(row) for row in rows] == [(first.run_id, "a1b2c3d4", 1), (second.run_id, "a1b2c3d4", 0)]
+
+
+def test_a_kept_session_that_is_gone_is_replaced(conn: sqlite3.Connection, config: Config, tmp_path: Path) -> None:
+    check = add_check(conn, reuse_session=True)
+    conn.execute("UPDATE checks SET kept_session = 'deadbeef' WHERE check_id = ?", (check,))
+    at = local(2026, 10, 22, 9)
+    [run] = claim(conn, PROJECT, at)
+
+    launch(conn, config, run, str(tmp_path), at)
+
+    [listing, started] = argvs(tmp_path / "claude.log")
+    assert listing == ["agents", "--json", "--all"]
+    assert started[:2] == ["--bg", "-n"]
+    assert kept_session(conn, check) == "a1b2c3d4"
+
+
+def test_an_unreadable_session_list_becomes_an_error_outcome(
+    conn: sqlite3.Connection, config: Config, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("FAKE_CLAUDE_AGENTS", "agent view is off")
+    check = add_check(conn, reuse_session=True)
+    conn.execute("UPDATE checks SET kept_session = 'a1b2c3d4' WHERE check_id = ?", (check,))
+    at = local(2026, 10, 22, 9)
+    [run] = claim(conn, PROJECT, at)
+
+    launch(conn, config, run, "/", at)
+
+    row = conn.execute("SELECT outcome, summary FROM runs WHERE run_id = ?", (run.run_id,)).fetchone()
+    assert row["outcome"] == "error"
+    assert "printed no JSON" in row["summary"]
+
+
+def test_a_kept_session_is_stopped_once_and_not_removed(
+    conn: sqlite3.Connection, config: Config, tmp_path: Path
+) -> None:
+    add_check(conn, reuse_session=True)
+    at = local(2026, 10, 22, 9)
+    [run] = claim(conn, PROJECT, at)
+    launch(conn, config, run, "/", at)
+    finish(conn, config, run_id=run.run_id, outcome="ok", summary="fine", at=at)
+    conn.execute("UPDATE runs SET seen = 1")
+
+    remove_finished(conn, config, at)
+    remove_finished(conn, config, at)
+
+    assert cleanups(tmp_path / "claude.log") == [["stop", "a1b2c3d4"]]
+
+
+def test_a_session_the_check_no_longer_keeps_is_removed(
+    conn: sqlite3.Connection, config: Config, tmp_path: Path
+) -> None:
+    check = add_check(conn, reuse_session=True)
+    at = local(2026, 10, 22, 9)
+    [run] = claim(conn, PROJECT, at)
+    launch(conn, config, run, "/", at)
+    finish(conn, config, run_id=run.run_id, outcome="ok", summary="fine", at=at)
+    conn.execute("UPDATE runs SET seen = 1")
+    remove_finished(conn, config, at)
+
+    conn.execute("UPDATE checks SET active = 0 WHERE check_id = ?", (check,))
+    remove_finished(conn, config, at)
+
+    assert cleanups(tmp_path / "claude.log") == [["stop", "a1b2c3d4"], ["rm", "a1b2c3d4"]]

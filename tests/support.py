@@ -28,12 +28,13 @@ def add_check(  # noqa: PLR0913 - a builder: every column of a check, all option
     name: str = "test check",
     text: str = "check something",
     browser: bool = False,
+    reuse_session: bool = False,
     created_at: datetime = CREATED,
 ) -> int:
     """Insert a check and return its id."""
     cursor = conn.execute(
-        "INSERT INTO checks (scope, name, text, cadence, interval_seconds, due_at, cron, kind, browser, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO checks (scope, name, text, cadence, interval_seconds, due_at, cron, kind, browser, reuse_session, "
+        "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             scope,
             name,
@@ -44,6 +45,7 @@ def add_check(  # noqa: PLR0913 - a builder: every column of a check, all option
             cron,
             kind,
             int(browser),
+            int(reuse_session),
             stamp(created_at),
         ),
     )

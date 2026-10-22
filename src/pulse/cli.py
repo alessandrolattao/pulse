@@ -30,6 +30,9 @@ if TYPE_CHECKING:
 
 Result: TypeAlias = dict[str, object]
 
+REUSE_HELP = "every run continues the same background session, which keeps what the earlier runs found"
+NOTE_RUNS_NO_SESSION = "a note runs no session: it takes no browser, no method and no session to reuse"
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Context:
@@ -61,15 +64,19 @@ def build_parser() -> argparse.ArgumentParser:
     when.add_argument("--cron", metavar="EXPRESSION", help='at fixed local times: "0 9 * * mon"')
     when.add_argument("--at", metavar="TIME", help='once, at the first chance after a local time: "2026-10-23 09:00"')
     add.add_argument("--browser", action="store_true", help="let the check read through Claude in Chrome")
+    add.add_argument("--reuse-session", action="store_true", help=REUSE_HELP)
     add_configuration(add)
     add.add_argument("text", help="the request, complete enough for an agent with no other context")
 
-    update = sub.add_parser("update", help="change the name, text, method, requirements or browser of a check")
+    update = sub.add_parser(
+        "update", help="change the name, text, method, requirements, browser or session reuse of a check"
+    )
     update.add_argument("check_id", type=int)
     update.add_argument("--name")
     update.add_argument("--text")
     add_configuration(update)
     update.add_argument("--browser", action=argparse.BooleanOptionalAction, default=None)
+    update.add_argument("--reuse-session", action=argparse.BooleanOptionalAction, default=None, help=REUSE_HELP)
 
     listing = sub.add_parser("list", help="the checks of this project and the system ones")
     listing.add_argument("--all", action="store_true", help="every scope, inactive checks included")
@@ -110,6 +117,7 @@ def check_view(conn: sqlite3.Connection, check: sqlite3.Row) -> Result:
         "schedule": describe(check),
         "kind": check["kind"],
         "browser": bool(check["browser"]),
+        "reuse_session": bool(check["reuse_session"]),
         "active": bool(check["active"]),
         "text": check["text"],
         "method": check["method"],
@@ -151,9 +159,8 @@ def cmd_add(ctx: Context) -> Result:
         raise PulseError(msg)
     method = (ctx.args.method or "").strip()
     if ctx.args.kind == Kind.NOTE:
-        if ctx.args.browser or method:
-            msg = "a note runs no session: it takes no browser and no method"
-            raise PulseError(msg)
+        if ctx.args.browser or method or ctx.args.reuse_session:
+            raise PulseError(NOTE_RUNS_NO_SESSION)
     elif not method:
         msg = "a check is saved only once a trial run worked: pass --method with what worked"
         raise PulseError(msg)
@@ -161,7 +168,7 @@ def cmd_add(ctx: Context) -> Result:
     cadence, interval, due_at, cron = schedule_columns(ctx.args)
     cursor = ctx.conn.execute(
         "INSERT INTO checks (scope, name, text, cadence, interval_seconds, due_at, cron, kind, method, requires, "
-        "browser, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "browser, reuse_session, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             scope,
             name,
@@ -174,6 +181,7 @@ def cmd_add(ctx: Context) -> Result:
             method,
             (ctx.args.requires or "").strip(),
             int(ctx.args.browser),
+            int(ctx.args.reuse_session),
             stamp(ctx.at),
         ),
     )
@@ -199,16 +207,20 @@ def cmd_update(ctx: Context) -> Result:
     }
     if ctx.args.browser is not None:
         changes["browser"] = int(ctx.args.browser)
+    if ctx.args.reuse_session is not None:
+        changes["reuse_session"] = int(ctx.args.reuse_session)
     if not changes:
-        msg = "nothing to change: pass at least one of --name, --text, --method, --requires, --browser"
+        msg = "nothing to change: pass at least one of --name, --text, --method, --requires, --browser, --reuse-session"
         raise PulseError(msg)
     if any(changes.get(column) == "" for column in ("name", "text")):
         msg = "the name and the text of a check cannot be empty"
         raise PulseError(msg)
-    if row["kind"] == Kind.NOTE and (changes.get("browser") or changes.get("method")):
-        msg = "a note runs no session: it takes no browser and no method"
-        raise PulseError(msg)
-    # Column names come from the fixed tuple above, never from input.
+    if row["kind"] == Kind.NOTE and (changes.get("browser") or changes.get("method") or changes.get("reuse_session")):
+        raise PulseError(NOTE_RUNS_NO_SESSION)
+    # A kept session runs with the browser it started with: a new setting, or no reuse, lets it go.
+    if changes.get("browser", row["browser"]) != row["browser"] or changes.get("reuse_session") == 0:
+        changes["kept_session"] = None
+    # Column names come from the fixed names above, never from input.
     assignments = ", ".join(f"{column} = ?" for column in changes)
     ctx.conn.execute(
         f"UPDATE checks SET {assignments} WHERE check_id = ?",  # noqa: S608 - fixed column names

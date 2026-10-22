@@ -107,6 +107,9 @@ class ClaimedRun:
     schedule: str
     scope: str
     browser: bool
+    reuse_session: bool
+    kept_session: str | None
+    """The short id of the session the check keeps for its next run, when it has one."""
     text: str
     method: str
     requires: str
