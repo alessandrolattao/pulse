@@ -126,19 +126,20 @@ def test_add_stores_the_session_reuse(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("options", "kept"),
+    ("added", "options", "kept"),
     [
-        (["--browser"], None),
-        (["--no-reuse-session"], None),
-        (["--no-browser"], "a1b2c3d4"),
-        (["--method", "gh api repos/x/y/releases"], "a1b2c3d4"),
+        ([], ["--browser"], None),
+        (["--browser"], ["--no-browser"], None),
+        ([], ["--no-reuse-session"], None),
+        ([], ["--no-browser"], "a1b2c3d4"),
+        ([], ["--method", "gh api repos/x/y/releases"], "a1b2c3d4"),
     ],
 )
 def test_the_kept_session_goes_with_a_new_browser_or_without_reuse(
-    tmp_path: Path, options: list[str], kept: str | None
+    tmp_path: Path, added: list[str], options: list[str], kept: str | None
 ) -> None:
     db = tmp_path / "pulse.db"
-    add(tmp_path, db, *CHECK, "--daily", "--reuse-session")
+    add(tmp_path, db, *CHECK, *added, "--daily", "--reuse-session")
     conn = connect(db)
     conn.execute("UPDATE checks SET kept_session = 'a1b2c3d4'")
 

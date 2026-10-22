@@ -15,6 +15,7 @@ from pulse.config import BIN, CHECK_AGENT, CHECK_AGENT_REF, CHECK_MODEL, TITLE
 from pulse.errors import PulseError
 from pulse.model import FINAL_OUTCOMES, KEEP_SESSION, SYSTEM, Kind, Outcome
 from pulse.runs import finish
+from pulse.schedule import in_flight
 
 if TYPE_CHECKING:
     import sqlite3
@@ -130,6 +131,9 @@ def kept_session(config: Config, run: ClaimedRun) -> str | None:
     except json.JSONDecodeError as exc:
         msg = f"`claude agents --json --all` printed no JSON: {listed.strip()[:OUTPUT_EXCERPT]}"
         raise PulseError(msg) from exc
+    if not isinstance(sessions, list):
+        msg = f"`claude agents --json --all` printed no list of sessions: {listed.strip()[:OUTPUT_EXCERPT]}"
+        raise PulseError(msg)
     full = next(
         (
             session.get("sessionId")
@@ -198,7 +202,7 @@ def remove_finished(conn: sqlite3.Connection, config: Config, at: datetime) -> N
     conversation; it is removed once the check no longer keeps it.
     """
     rows = conn.execute(
-        "SELECT r.run_id, r.session_id, r.outcome, r.finished_at, r.session_stopped, "
+        "SELECT r.run_id, r.check_id, r.session_id, r.outcome, r.finished_at, r.session_stopped, "
         "c.active AND c.reuse_session AND c.kept_session = r.session_id AS kept "
         "FROM runs r JOIN checks c USING (check_id) "
         "WHERE r.session_id IS NOT NULL AND r.session_removed = 0 AND r.outcome != ? AND r.seen = 1",
@@ -209,7 +213,8 @@ def remove_finished(conn: sqlite3.Connection, config: Config, at: datetime) -> N
         if row["outcome"] != Outcome.OK and at - finished < KEEP_SESSION:
             continue
         if row["kept"]:
-            if not row["session_stopped"]:
+            # A newer run of the check may be resuming the session: then it is that run's.
+            if not row["session_stopped"] and not in_flight(conn, row["check_id"]):
                 # A session the user already stopped or removed by hand counts as stopped too.
                 subprocess.run(  # noqa: S603 - fixed argv
                     [config.launcher, "stop", row["session_id"]], capture_output=True, timeout=30, check=False
