@@ -6,6 +6,8 @@ All notable changes to Pulse are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-22
+
 ### Added
 
 - Every push runs the checks; a `vX.Y.Z` tag on `main` publishes the release
@@ -50,5 +52,6 @@ All notable changes to Pulse are documented here. The format follows
 - Optional read-only browser access through Claude in Chrome, only with the
   user's consent.
 
-[Unreleased]: https://github.com/alessandrolattao/pulse/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/alessandrolattao/pulse/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/alessandrolattao/pulse/releases/tag/v0.3.0
 [0.2.0]: https://github.com/alessandrolattao/pulse/releases/tag/v0.2.0

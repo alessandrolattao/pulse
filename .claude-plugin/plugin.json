@@ -1,7 +1,7 @@
 {
   "name": "pulse",
   "displayName": "Pulse",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Recurring checks and reminders that run in background Claude Code sessions and notify you, without ever touching your conversation.",
   "author": {
     "name": "Alessandro Lattao",
