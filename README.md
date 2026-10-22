@@ -40,7 +40,7 @@ conversation you are having, so the model stays on your work.
         │
         ▼
   hook: pulse tick ──── due? ────────────────▶ claude --bg -n "Pulse · <name>"
-        │                                          --agent pulse-check
+        │                                          --agent pulse:pulse-check
         │                                          (read only, Sonnet,
         │                                           the saved method)
         │                                                │
@@ -69,8 +69,12 @@ conversation you are having, so the model stays on your work.
 - `ok` stays quiet. `found`, `auth` (a login to renew) and `error` notify
   you. A failed run waits for its next period instead of repeating on every
   message; say "retry" once you have fixed the cause.
+- A check can keep its session: if you say yes when it is set up, every
+  run continues the same background session, so it sees what the earlier
+  runs found. Otherwise each run starts in a new session.
 - Finished sessions leave `claude agents` on their own: at once when ok,
-  after a day otherwise.
+  after a day otherwise. A session its check keeps is stopped instead, with
+  its conversation, and removed once the check no longer keeps it.
 - The requests and the log of every run live in a SQLite file in the
   plugin's data directory (`~/.claude/plugins/data/…`), which survives
   updates.

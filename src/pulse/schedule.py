@@ -135,6 +135,8 @@ def claim(conn: sqlite3.Connection, project: str, at: datetime, *, failed_only: 
                     schedule=describe(check),
                     scope=check["scope"],
                     browser=bool(check["browser"]),
+                    reuse_session=bool(check["reuse_session"]),
+                    kept_session=check["kept_session"],
                     text=check["text"],
                     method=check["method"],
                     requires=check["requires"],
