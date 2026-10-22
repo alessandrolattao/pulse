@@ -138,3 +138,9 @@ The code is a small standard-library package under `src/pulse`, run by
 Pulse is free software, released under the [GNU General Public License v3.0 or later](LICENSE).
 You can use it, change it and share it, also at work and for money, as long as what
 you distribute stays under the same license, with its source.
+
+The robot icon (`assets/robot.png`) is the
+[Robot icon](https://www.flaticon.com/free-icon/robot_6134346) created by
+Magnific - [Flaticon](https://www.flaticon.com/free-icons/robot), used under the
+Flaticon License with attribution. It is not covered by the GPL; see
+[assets/CREDITS.md](assets/CREDITS.md).
