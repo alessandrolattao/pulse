@@ -97,8 +97,10 @@ Requirements:
 
 - Claude Code with background sessions (`claude --bg`, `claude agents`).
 - Python 3.11 or newer as `python3`. Pulse uses the standard library only.
-- For desktop notifications, `notify-send` (Linux). Without it Pulse still
-  works and shows outcomes in the terminal only.
+- For desktop notifications, a D-Bus library in the system Python: PyGObject
+  (`gi`, shipped with GNOME desktops) or dbus-python (`dbus`). Pulse bundles and
+  installs nothing; without them it still works and shows outcomes in the
+  terminal only.
 - For browser checks, the Claude in Chrome extension.
 
 Checks run with your Claude Code permission settings: in the default mode a
