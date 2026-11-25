@@ -6,6 +6,8 @@ All notable changes to Pulse are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-25
+
 ### Added
 
 - A check can have an end, in words: `--until "<when it ends>"` on `add` and
@@ -73,6 +75,7 @@ All notable changes to Pulse are documented here. The format follows
 - Optional read-only browser access through Claude in Chrome, only with the
   user's consent.
 
-[Unreleased]: https://github.com/alessandrolattao/pulse/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/alessandrolattao/pulse/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/alessandrolattao/pulse/releases/tag/v0.4.0
 [0.3.0]: https://github.com/alessandrolattao/pulse/releases/tag/v0.3.0
 [0.2.0]: https://github.com/alessandrolattao/pulse/releases/tag/v0.2.0
