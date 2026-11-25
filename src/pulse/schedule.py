@@ -140,6 +140,7 @@ def claim(conn: sqlite3.Connection, project: str, at: datetime, *, failed_only: 
                     text=check["text"],
                     method=check["method"],
                     requires=check["requires"],
+                    until=check["until"],
                 )
             )
         conn.execute("COMMIT")

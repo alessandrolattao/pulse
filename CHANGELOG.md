@@ -6,6 +6,17 @@ All notable changes to Pulse are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A check can have an end, in words: `--until "<when it ends>"` on `add` and
+  `update`, removed with `update --no-until`, shown by `list`. Every run
+  judges it first, with the same tools as the check; the run that finds it
+  true does the check one last time, records that outcome with
+  `pulse finish --ended`, and the check switches off, keeping its log. That
+  run always notifies, also when `ok`, with `ended: <condition>`. A run that
+  cannot tell whether the end has come reports `auth` or `error` as usual and
+  the check stays on. A reminder or a note takes no end.
+
 ## [0.3.0] - 2026-10-22
 
 ### Added

@@ -19,13 +19,22 @@ if TYPE_CHECKING:
 
 
 def finish(  # noqa: PLR0913 - every argument is a distinct input of the record
-    conn: sqlite3.Connection, config: Config, *, run_id: int, outcome: str, summary: str, at: datetime
+    conn: sqlite3.Connection,
+    config: Config,
+    *,
+    run_id: int,
+    outcome: str,
+    summary: str,
+    at: datetime,
+    ended: bool = False,
 ) -> dict[str, object]:
     """Close a run.
 
-    A reminder that is `found` and a one-off that is done deactivate
-    themselves; anything but `ok` sends a desktop notification. The outcome is
-    stored unseen, so the next tick shows it to the user.
+    A reminder that is `found`, a one-off that is done and a run that found
+    its check's end condition true (`ended`, only for a check that has one)
+    deactivate the check; anything but `ok`, and an ended run, sends a desktop
+    notification. The outcome is stored unseen, so the next tick shows it to
+    the user.
     """
     if outcome not in FINAL_OUTCOMES:
         msg = f"outcome must be one of {', '.join(FINAL_OUTCOMES)}"
@@ -42,23 +51,30 @@ def finish(  # noqa: PLR0913 - every argument is a distinct input of the record
     if run["outcome"] != Outcome.RUNNING and run["summary"] != ABANDONED:
         msg = f"run {run_id} is already finished ({run['outcome']})"
         raise PulseError(msg)
-    conn.execute(
-        "UPDATE runs SET outcome = ?, summary = ?, finished_at = ?, seen = 0 WHERE run_id = ?",
-        (final, summary, stamp(at), run_id),
-    )
     check = conn.execute("SELECT * FROM checks WHERE check_id = ?", (run["check_id"],)).fetchone()
-    # A reminder that spoke, and a one-off that did its job, are over.
+    # Refused before anything is written: the run stays open for a corrected finish.
+    if ended and not check["until"]:
+        msg = f"check {check['check_id']} has no end condition: record the outcome without --ended"
+        raise PulseError(msg)
+    conn.execute(
+        "UPDATE runs SET outcome = ?, summary = ?, finished_at = ?, seen = 0, ended = ? WHERE run_id = ?",
+        (final, summary, stamp(at), int(ended), run_id),
+    )
+    # A reminder that spoke, a one-off that did its job, and a check whose end came, are over.
     deactivated = bool(check["active"]) and (
-        (final is Outcome.FOUND and check["kind"] == Kind.REMINDER) or (final.done and check["cadence"] == Cadence.ONCE)
+        ended
+        or (final is Outcome.FOUND and check["kind"] == Kind.REMINDER)
+        or (final.done and check["cadence"] == Cadence.ONCE)
     )
     if deactivated:
         conn.execute("UPDATE checks SET active = 0 WHERE check_id = ?", (check["check_id"],))
     name = check["name"] or f"check {check['check_id']}"
-    notified = final is not Outcome.OK and notify(config, name, final, summary)
+    notified = notify(config, name, final, summary, ended=check["until"] if ended else None)
     return {
         "run_id": run_id,
         "check_id": check["check_id"],
         "outcome": final.value,
+        "ended": ended,
         "reminder_deactivated": deactivated,
         "notified": notified,
     }

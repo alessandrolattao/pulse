@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 CHECK = ["--kind", "check", "--method", "gh release list", "--requires", "gh, logged in (gh auth status)"]
+REMINDER = ["--kind", "reminder", "--method", "gh pr view 652"]
+NOTE = ["--kind", "note"]
 
 
 def clean_env() -> dict[str, str]:
@@ -90,6 +92,9 @@ def test_add_stores_the_schedule(tmp_path: Path, options: list[str], schedule: s
         ([*CHECK, "--every", "1m"], "shortest interval"),
         ([*CHECK, "--cron", "0 9 * *"], "5 fields"),
         ([*CHECK, "--at", "tomorrow"], "a time is written like"),
+        ([*CHECK, "--daily", "--until", "  "], "--no-until"),
+        ([*REMINDER, "--daily", "--until", "PR 652 is merged"], "only a check takes an end condition"),
+        ([*NOTE, "--daily", "--until", "PR 652 is merged"], "only a check takes an end condition"),
     ],
 )
 def test_add_refuses_what_cannot_run(tmp_path: Path, options: list[str], error: str) -> None:
@@ -150,6 +155,57 @@ def test_the_kept_session_goes_with_a_new_browser_or_without_reuse(
     conn.close()
 
 
+def test_add_stores_the_end_condition_and_list_shows_it(tmp_path: Path) -> None:
+    db = tmp_path / "pulse.db"
+
+    added = add(tmp_path, db, *CHECK, "--every", "1h", "--until", " PR 652 is merged ")
+    checks = output(run(["list"], tmp_path, db))["checks"]
+
+    assert added.returncode == 0, added.stdout
+    assert output(added)["until"] == "PR 652 is merged"
+    assert isinstance(checks, list)
+    assert [check["until"] for check in checks] == ["PR 652 is merged"]
+
+
+def test_a_check_saved_without_until_has_no_end(tmp_path: Path) -> None:
+    added = add(tmp_path, tmp_path / "pulse.db", *CHECK, "--daily")
+
+    assert output(added)["until"] == ""
+
+
+@pytest.mark.parametrize(
+    ("options", "until"), [(["--until", "the batch is over"], "the batch is over"), (["--no-until"], "")]
+)
+def test_update_sets_or_removes_the_end_condition(tmp_path: Path, options: list[str], until: str) -> None:
+    db = tmp_path / "pulse.db"
+    add(tmp_path, db, *CHECK, "--daily", "--until", "PR 652 is merged")
+
+    updated = run(["update", "1", *options], tmp_path, db)
+
+    assert updated.returncode == 0, updated.stdout
+    assert output(updated)["until"] == until
+
+
+@pytest.mark.parametrize(
+    ("added", "options", "error"),
+    [
+        (CHECK, ["--until", " "], "--no-until"),
+        (REMINDER, ["--until", "PR 652 is merged"], "only a check takes an end condition"),
+        (NOTE, ["--until", "PR 652 is merged"], "only a check takes an end condition"),
+    ],
+)
+def test_update_refuses_an_empty_end_or_an_end_on_another_kind(
+    tmp_path: Path, added: list[str], options: list[str], error: str
+) -> None:
+    db = tmp_path / "pulse.db"
+    add(tmp_path, db, *added, "--daily")
+
+    updated = run(["update", "1", *options], tmp_path, db)
+
+    assert updated.returncode == 1
+    assert error in str(output(updated)["error"])
+
+
 def test_list_shows_the_checks_in_scope(tmp_path: Path) -> None:
     db = tmp_path / "pulse.db"
     add(tmp_path, db, *CHECK, "--daily")
@@ -172,6 +228,24 @@ def test_finish_reads_the_summary_verbatim_from_stdin(tmp_path: Path) -> None:
     assert done.returncode == 0, done.stdout
     assert isinstance(runs, list)
     assert runs[0]["summary"] == summary
+
+
+def test_finish_ended_switches_the_check_off_and_keeps_its_log(tmp_path: Path) -> None:
+    db = tmp_path / "pulse.db"
+    add(tmp_path, db, *CHECK, "--every", "1h", "--until", "PR 652 is merged")
+    run_id = claim_one(tmp_path, db)
+
+    done = run(["finish", str(run_id), "--outcome", "ok", "--ended"], tmp_path, db, "merged, nothing new")
+    checks = output(run(["list", "--all"], tmp_path, db))["checks"]
+    runs = output(run(["log"], tmp_path, db))["runs"]
+
+    assert done.returncode == 0, done.stdout
+    assert output(done)["ended"] is True
+    assert isinstance(checks, list)
+    assert [check["active"] for check in checks] == [False]
+    assert isinstance(runs, list)
+    assert [(row["outcome"], row["ended"], row["summary"]) for row in runs] == [("ok", 1, "merged, nothing new")]
+    assert output(run(["list"], tmp_path, db))["checks"] == []
 
 
 def test_an_empty_summary_is_refused(tmp_path: Path) -> None:

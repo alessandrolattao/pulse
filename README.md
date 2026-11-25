@@ -63,6 +63,14 @@ conversation you are having, so the model stays on your work.
 | `--cron "0 9 * * mon"` | at fixed times, standard five-field cron |
 | `--at "2026-10-23 09:00"` | once, then it switches off |
 
+| End | What it does |
+| --- | --- |
+| `--until "PR 652 is merged"` | a `check` with an end, in words: every run judges it first, with the same tools as the check; the run that finds it true does the check one last time, tells you `ended: <condition>` and switches the check off, keeping its log |
+| `update --no-until` | removes the end: the check runs until you remove it |
+
+A run that cannot tell whether the end has come (a tool or a login missing)
+reports the error as usual and the check stays on: it never ends by mistake.
+
 - A due run starts at the first hook event after it becomes due: your next
   message, or the end of a turn. Two sessions opening together never run the
   same check twice.

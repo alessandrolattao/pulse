@@ -96,6 +96,11 @@ def format_interval(seconds: int) -> str:
     return f"{seconds}s"
 
 
+def ended_line(until: str) -> str:
+    """What Pulse adds to the outcome of the run that ended its check."""
+    return f"ended: {until}"
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ClaimedRun:
     """A run taken for one check, waiting for its background session."""
@@ -113,6 +118,8 @@ class ClaimedRun:
     text: str
     method: str
     requires: str
+    until: str
+    """When the check ends, in words; empty when it has no end."""
 
     def as_dict(self) -> dict[str, object]:
         """Return the run as plain JSON-ready values."""

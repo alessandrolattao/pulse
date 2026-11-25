@@ -115,8 +115,24 @@ def test_prompt_carries_the_db_and_the_finish_command(conn: sqlite3.Connection, 
     assert "Is the release out?" in prompt
     assert "gh release list --repo aws/aws-lambda-go" in prompt
     assert "gh auth status" in prompt
-    assert f"{BIN} --db {config.db_path} finish {run.run_id} --outcome" in prompt
-    assert "<<'PULSE_SUMMARY'" in prompt
+    assert (
+        f"{BIN} --db {config.db_path} finish {run.run_id} --outcome <ok|found|auth|error> <<'PULSE_SUMMARY'" in prompt
+    )
+    assert "--ended" not in prompt
+    assert "Ends when" not in prompt
+
+
+def test_the_prompt_of_a_check_with_an_end_carries_it_and_the_ended_option(
+    conn: sqlite3.Connection, config: Config
+) -> None:
+    add_check(conn, until="PR 652 is merged")
+    [run] = claim(conn, PROJECT, local(2026, 10, 22, 9))
+
+    prompt = check_prompt(config, run)
+
+    assert run.until == "PR 652 is merged"
+    assert "Ends when (judge it first, see your rules):\nPR 652 is merged\n" in prompt
+    assert f"finish {run.run_id} --outcome <ok|found|auth|error> [--ended] <<'PULSE_SUMMARY'" in prompt
 
 
 def test_a_failed_launch_becomes_an_error_outcome(
@@ -290,3 +306,18 @@ def test_a_kept_session_is_left_to_a_newer_run_in_flight(
     remove_finished(conn, config, next_at)
 
     assert cleanups(tmp_path / "claude.log") == []
+
+
+def test_the_kept_session_of_a_check_that_ended_is_removed(
+    conn: sqlite3.Connection, config: Config, tmp_path: Path
+) -> None:
+    add_check(conn, reuse_session=True, until="the batch is over")
+    at = local(2026, 10, 22, 9)
+    [run] = claim(conn, PROJECT, at)
+    launch(conn, config, run, "/", at)
+    finish(conn, config, run_id=run.run_id, outcome="ok", summary="over", at=at, ended=True)
+    conn.execute("UPDATE runs SET seen = 1")
+
+    remove_finished(conn, config, at)
+
+    assert cleanups(tmp_path / "claude.log") == [["rm", "a1b2c3d4"]]

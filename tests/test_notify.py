@@ -136,3 +136,13 @@ def test_ok_and_disabled_notifications_are_not_sent(
     assert not notify(config, "release", Outcome.OK, "fine")
     assert not notify(Config(db_path=tmp_path / "pulse.db", notify=False), "release", Outcome.FOUND, "x")
     assert recorder.calls == []
+
+
+def test_an_ended_run_notifies_also_when_ok_with_its_condition(monkeypatch: pytest.MonkeyPatch, config: Config) -> None:
+    recorder = Recorder()
+    install(monkeypatch, gi=False, dbus=True, recorder=recorder)
+
+    assert notify(config, "batch", Outcome.OK, "no new reports", ended="the batch is over")
+
+    [call] = recorder.calls
+    assert call[4:6] == ("Pulse · batch", "no new reports\nended: the batch is over")
