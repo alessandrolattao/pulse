@@ -71,6 +71,27 @@ conversation you are having, so the model stays on your work.
 A run that cannot tell whether the end has come (a tool or a login missing)
 reports the error as usual and the check stays on: it never ends by mistake.
 
+| Callback | What it does |
+| --- | --- |
+| `--callback "<command>"` | after every run of a check, a reminder or a note, Pulse itself runs the command, with no model involved: `/bin/sh -c`, in the check's project directory (your home directory for a `system` check), with the outcome in the environment |
+| `update --no-callback` | removes it: runs only tell you |
+
+The command gets your environment plus:
+
+- `PULSE_CHECK`: the check's name; `PULSE_CHECK_ID`: its id;
+- `PULSE_OUTCOME`: `ok`, `found`, `auth` or `error`;
+- `PULSE_SUMMARY`: the run's summary, as `log` shows it;
+- `PULSE_ENDED`: `1` when this run ended the check (`--until`), empty
+  otherwise.
+
+One callback per check, called after every run: the command decides what to
+do with the outcome. It starts detached, once the outcome is recorded, and
+has 5 minutes; its exit status and the first 20 lines of its output go into
+the run's log (`callback_status`, `callback_output`). A failing callback never
+changes the outcome, never notifies and never stops the check. It runs
+outside Claude Code's permission settings, so Claude shows you the exact
+command and saves it only with your yes.
+
 - A due run starts at the first hook event after it becomes due: your next
   message, or the end of a turn. Two sessions opening together never run the
   same check twice.

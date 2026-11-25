@@ -12,6 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeAlias
 
+from pulse.callbacks import run_callback
 from pulse.clock import stamp, utcnow
 from pulse.config import Config
 from pulse.cron import Cron
@@ -40,6 +41,11 @@ UNTIL_CHECK_ONLY = (
     "and a note runs no session to judge one"
 )
 UNTIL_EMPTY = "an end condition cannot be empty: leave out --until for no end, or remove one with update --no-until"
+CALLBACK_HELP = (
+    "a shell command Pulse runs itself after every run, in the check's directory, "
+    "with the outcome in PULSE_CHECK, PULSE_CHECK_ID, PULSE_OUTCOME, PULSE_SUMMARY and PULSE_ENDED"
+)
+CALLBACK_EMPTY = "a callback cannot be empty: leave out --callback for none, or remove one with update --no-callback"
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -74,11 +80,13 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("--browser", action="store_true", help="let the check read through Claude in Chrome")
     add.add_argument("--reuse-session", action="store_true", help=REUSE_HELP)
     add.add_argument("--until", metavar="CONDITION", help=UNTIL_HELP)
+    add.add_argument("--callback", metavar="COMMAND", help=CALLBACK_HELP)
     add_configuration(add)
     add.add_argument("text", help="the request, complete enough for an agent with no other context")
 
     update = sub.add_parser(
-        "update", help="change the name, text, method, requirements, browser, session reuse or end of a check"
+        "update",
+        help="change the name, text, method, requirements, browser, session reuse, end or callback of a check",
     )
     update.add_argument("check_id", type=int)
     update.add_argument("--name")
@@ -89,6 +97,9 @@ def build_parser() -> argparse.ArgumentParser:
     end = update.add_mutually_exclusive_group()
     end.add_argument("--until", metavar="CONDITION", help=UNTIL_HELP)
     end.add_argument("--no-until", action="store_true", help="remove the end condition: the check runs until removed")
+    hand_on = update.add_mutually_exclusive_group()
+    hand_on.add_argument("--callback", metavar="COMMAND", help=CALLBACK_HELP)
+    hand_on.add_argument("--no-callback", action="store_true", help="remove the callback: runs only notify the user")
 
     listing = sub.add_parser("list", help="the checks of this project and the system ones")
     listing.add_argument("--all", action="store_true", help="every scope, inactive checks included")
@@ -112,6 +123,11 @@ def build_parser() -> argparse.ArgumentParser:
     log.add_argument("--limit", type=int, default=20)
     log.add_argument("--all", action="store_true", help="every scope")
 
+    callback = sub.add_parser(
+        "callback", help="for Pulse itself: run the callback of a finished run and record its exit status and output"
+    )
+    callback.add_argument("run_id", type=int)
+
     sub.add_parser("project", help="the project of the current directory")
     return parser
 
@@ -131,6 +147,7 @@ def check_view(conn: sqlite3.Connection, check: sqlite3.Row) -> Result:
         "scope": check["scope"],
         "schedule": describe(check),
         "until": check["until"],
+        "callback": check["callback"],
         "kind": check["kind"],
         "browser": bool(check["browser"]),
         "reuse_session": bool(check["reuse_session"]),
@@ -178,6 +195,15 @@ def end_condition(until: str | None, kind: str) -> str | None:
     return until.strip()
 
 
+def callback_command(callback: str | None) -> str | None:
+    """Check a `--callback`: a command that is not blank. None when it was not given."""
+    if callback is None:
+        return None
+    if not callback.strip():
+        raise PulseError(CALLBACK_EMPTY)
+    return callback.strip()
+
+
 def cmd_add(ctx: Context) -> Result:
     """Store a new check in this project or in the system scope."""
     text, name = ctx.args.text.strip(), ctx.args.name.strip()
@@ -192,11 +218,12 @@ def cmd_add(ctx: Context) -> Result:
         msg = "a check is saved only once a trial run worked: pass --method with what worked"
         raise PulseError(msg)
     until = end_condition(ctx.args.until, ctx.args.kind) or ""
+    callback = callback_command(ctx.args.callback) or ""
     scope = ctx.project if ctx.args.scope == "project" else SYSTEM
     cadence, interval, due_at, cron = schedule_columns(ctx.args)
     cursor = ctx.conn.execute(
         "INSERT INTO checks (scope, name, text, cadence, interval_seconds, due_at, cron, kind, method, requires, "
-        "until, browser, reuse_session, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "until, callback, browser, reuse_session, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             scope,
             name,
@@ -209,6 +236,7 @@ def cmd_add(ctx: Context) -> Result:
             method,
             (ctx.args.requires or "").strip(),
             until,
+            callback,
             int(ctx.args.browser),
             int(ctx.args.reuse_session),
             stamp(ctx.at),
@@ -241,10 +269,13 @@ def cmd_update(ctx: Context) -> Result:
     until = end_condition(ctx.args.until, row["kind"])
     if until is not None or ctx.args.no_until:
         changes["until"] = until or ""
+    callback = callback_command(ctx.args.callback)
+    if callback is not None or ctx.args.no_callback:
+        changes["callback"] = callback or ""
     if not changes:
         msg = (
             "nothing to change: pass at least one of --name, --text, --method, --requires, --browser, "
-            "--reuse-session, --until, --no-until"
+            "--reuse-session, --until, --no-until, --callback, --no-callback"
         )
         raise PulseError(msg)
     if any(changes.get(column) == "" for column in ("name", "text")):
@@ -316,6 +347,11 @@ def cmd_log(ctx: Context) -> Result:
     return {"project": ctx.project, "runs": [dict(row) for row in rows]}
 
 
+def cmd_callback(ctx: Context) -> Result:
+    """Run the callback of a finished run: what `runs.finish` starts, detached."""
+    return run_callback(ctx.conn, ctx.args.run_id)
+
+
 def cmd_project(ctx: Context) -> Result:
     """Show the project the current directory belongs to."""
     return {"project": ctx.project}
@@ -329,6 +365,7 @@ COMMANDS: dict[str, Callable[[Context], Result]] = {
     "retry": cmd_retry,
     "finish": cmd_finish,
     "log": cmd_log,
+    "callback": cmd_callback,
     "project": cmd_project,
 }
 

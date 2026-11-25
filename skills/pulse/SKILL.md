@@ -50,14 +50,26 @@ that the user picks an option instead of typing one.
    and switches the check off. Set it with `--until`, on a `check` only: a
    reminder already switches off when it speaks, and a note has no session
    to judge one.
-6. **Save it once it works**, with what the trial proved:
+6. **Ask where the result must go**, when it must reach something other
+   than the user (another tool, an inbox, a file, a chat): use a callback,
+   never a last step of the method, which depends on the model remembering
+   it. After every run Pulse itself runs the command with `/bin/sh -c`, in
+   the project directory (the home directory for a `system` check), with
+   the outcome in `PULSE_CHECK`, `PULSE_CHECK_ID`, `PULSE_OUTCOME` (`ok`,
+   `found`, `auth` or `error`), `PULSE_SUMMARY` and `PULSE_ENDED` (`1` when
+   the run ended the check). The command decides what to do with each
+   outcome. It runs outside Claude Code's permission settings, with no
+   prompt: show the user the exact command and save it only after their
+   yes. Any kind takes one, a note too.
+7. **Save it once it works**, with what the trial proved:
    - `--method`: the steps that worked, in order, with the exact commands,
      endpoints or pages, and how to tell `found` from `ok`;
    - `--requires`: each tool and login it depends on, with the command that
      checks or renews it;
    - `--browser` only if the user said yes;
    - `--reuse-session` only if the user said yes;
-   - `--until "<when it ends>"` only for a check whose request has an end.
+   - `--until "<when it ends>"` only for a check whose request has an end;
+   - `--callback "<command>"` only with the user's yes to that exact command.
 
 A plain reminder with nothing to look into ("remind me tomorrow at 9 to call
 Marco") is a `note`: no trial, no method, no session. It is simply told to the
@@ -67,13 +79,13 @@ user when due.
 
 | What | Command |
 | --- | --- |
-| Save a check | `add --scope project\|system --kind check --name "<few words>" <schedule> --method "…" --requires "…" [--browser] [--reuse-session] [--until "<when it ends>"] "<text>"` |
+| Save a check | `add --scope project\|system --kind check --name "<few words>" <schedule> --method "…" --requires "…" [--browser] [--reuse-session] [--until "<when it ends>"] [--callback "<command>"] "<text>"` |
 | Save a reminder (speaks once, when a condition holds) | same, with `--kind reminder` and no `--until` |
-| Save a note (just tell the user) | `add --scope … --kind note --name "…" <schedule> "<what to tell>"` |
-| Change what a check does or needs | `update <check_id> [--name …] [--text …] [--method …] [--requires …] [--browser\|--no-browser] [--reuse-session\|--no-reuse-session] [--until "…"\|--no-until]` |
+| Save a note (just tell the user) | `add --scope … --kind note --name "…" <schedule> [--callback "<command>"] "<what to tell>"` |
+| Change what a check does or needs | `update <check_id> [--name …] [--text …] [--method …] [--requires …] [--browser\|--no-browser] [--reuse-session\|--no-reuse-session] [--until "…"\|--no-until] [--callback "…"\|--no-callback]` |
 | See what is watched | `list` (this project and the system scope), `list --all` |
 | Stop one | `remove <check_id>` (deactivates it; its log stays) |
-| How it went | `log [--check-id N] [--limit N] [--all]` |
+| How it went (a callback's exit status and output too) | `log [--check-id N] [--limit N] [--all]` |
 | Retry after a login or error notice | `retry` |
 
 Schedules, in the user's local time:
