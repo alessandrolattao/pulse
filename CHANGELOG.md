@@ -16,6 +16,16 @@ All notable changes to Pulse are documented here. The format follows
   run always notifies, also when `ok`, with `ended: <condition>`. A run that
   cannot tell whether the end has come reports `auth` or `error` as usual and
   the check stays on. A reminder or a note takes no end.
+- A check, a reminder or a note can hand its outcome on by itself:
+  `--callback "<command>"` on `add` and `update`, removed with
+  `update --no-callback`, shown by `list`. After every run, once the outcome
+  is recorded, Pulse runs the command itself, detached and with no model
+  involved: `/bin/sh -c`, in the check's project directory (the home
+  directory for a system check), with `PULSE_CHECK`, `PULSE_CHECK_ID`,
+  `PULSE_OUTCOME`, `PULSE_SUMMARY` and `PULSE_ENDED` in its environment. It
+  has 5 minutes; its exit status and the first 20 lines of its output go into
+  the run's log. A failing callback never changes the outcome, never notifies
+  and never stops the check.
 
 ## [0.3.0] - 2026-10-22
 

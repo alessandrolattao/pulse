@@ -35,7 +35,7 @@ INSERT INTO runs (check_id, started_at, outcome, summary)
 """
 
 
-def test_an_older_db_gets_no_end_and_no_ended_run(tmp_path: Path) -> None:
+def test_an_older_db_gets_no_end_no_callback_and_no_ended_run(tmp_path: Path) -> None:
     path = tmp_path / "pulse.db"
     with sqlite3.connect(path) as old:
         old.executescript(FIRST_SCHEMA)
@@ -43,6 +43,6 @@ def test_an_older_db_gets_no_end_and_no_ended_run(tmp_path: Path) -> None:
 
     conn = connect(path)
 
-    assert conn.execute("SELECT until FROM checks").fetchone()[0] == ""
-    assert conn.execute("SELECT ended FROM runs").fetchone()[0] == 0
+    assert tuple(conn.execute("SELECT until, callback FROM checks").fetchone()) == ("", "")
+    assert tuple(conn.execute("SELECT ended, callback_status, callback_output FROM runs").fetchone()) == (0, None, "")
     conn.close()

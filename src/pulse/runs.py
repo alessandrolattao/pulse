@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from pulse.callbacks import spawn
 from pulse.clock import stamp
 from pulse.errors import PulseError
 from pulse.model import ABANDONED, FINAL_OUTCOMES, Cadence, Kind, Outcome
@@ -34,7 +35,8 @@ def finish(  # noqa: PLR0913 - every argument is a distinct input of the record
     its check's end condition true (`ended`, only for a check that has one)
     deactivate the check; anything but `ok`, and an ended run, sends a desktop
     notification. The outcome is stored unseen, so the next tick shows it to
-    the user.
+    the user. Once it is stored, the check's callback, when it has one, starts
+    detached, and nothing here waits for it.
     """
     if outcome not in FINAL_OUTCOMES:
         msg = f"outcome must be one of {', '.join(FINAL_OUTCOMES)}"
@@ -70,6 +72,9 @@ def finish(  # noqa: PLR0913 - every argument is a distinct input of the record
         conn.execute("UPDATE checks SET active = 0 WHERE check_id = ?", (check["check_id"],))
     name = check["name"] or f"check {check['check_id']}"
     notified = notify(config, name, final, summary, ended=check["until"] if ended else None)
+    # Autocommit: the outcome is committed by now, so the callback reads it.
+    if check["callback"]:
+        spawn(conn, config, run_id)
     return {
         "run_id": run_id,
         "check_id": check["check_id"],
