@@ -106,3 +106,16 @@ def test_a_broken_hook_reaches_the_user(monkeypatch: pytest.MonkeyPatch, tmp_pat
 
     assert "the hook failed" in shown
     assert "no database" in shown
+
+
+def test_tick_shows_the_run_that_ended_its_check_also_when_ok(
+    hook_env: Config, conn: sqlite3.Connection, tmp_path: Path
+) -> None:
+    add_check(conn, scope=str(tmp_path), name="batch", until="the batch is over")
+    tick(payload(tmp_path))
+    [run_id] = [row["run_id"] for row in conn.execute("SELECT run_id FROM runs")]
+
+    finish(conn, hook_env, run_id=run_id, outcome="ok", summary="no new reports", at=utcnow(), ended=True)
+
+    assert "batch [ok]: no new reports · ended: the batch is over" in message(tick(payload(tmp_path)))
+    assert tick(payload(tmp_path)) == ""

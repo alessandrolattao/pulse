@@ -33,7 +33,8 @@ def check_prompt(config: Config, run: ClaimedRun) -> str:
     """Build what a pulse-check session receives.
 
     The run, and the exact command that records its outcome, db included,
-    since the session inherits no environment.
+    since the session inherits no environment. Only a check with an end
+    condition gets it, and `--ended` as an option of that command.
     """
     outcomes = "|".join(FINAL_OUTCOMES)
     browser = (
@@ -41,6 +42,14 @@ def check_prompt(config: Config, run: ClaimedRun) -> str:
         if run.browser
         else "browser: not allowed\n"
     )
+    end = f"Ends when (judge it first, see your rules):\n{run.until}\n\n" if run.until else ""
+    record = (
+        "Record the outcome with exactly this command, the summary on stdin, "
+        "adding --ended only when the end condition holds:\n"
+        if run.until
+        else "Record the outcome with exactly this command, the summary on stdin:\n"
+    )
+    ended = " [--ended]" if run.until else ""
     return (
         f"Pulse run {run.run_id}\n"
         f"check_id: {run.check_id}\n"
@@ -50,10 +59,11 @@ def check_prompt(config: Config, run: ClaimedRun) -> str:
         f"scope: {run.scope}\n"
         f"{browser}\n"
         f"Check:\n{run.text}\n\n"
+        f"{end}"
         f"Verified method (follow it):\n{run.method or '(none recorded)'}\n\n"
         f"Requires:\n{run.requires or '(nothing recorded)'}\n\n"
-        "Record the outcome with exactly this command, the summary on stdin:\n"
-        f"{BIN} --db {config.db_path} finish {run.run_id} --outcome <{outcomes}> <<'PULSE_SUMMARY'\n"
+        f"{record}"
+        f"{BIN} --db {config.db_path} finish {run.run_id} --outcome <{outcomes}>{ended} <<'PULSE_SUMMARY'\n"
         "<summary>\n"
         "PULSE_SUMMARY\n"
     )

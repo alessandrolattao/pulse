@@ -32,6 +32,14 @@ Result: TypeAlias = dict[str, object]
 
 REUSE_HELP = "every run continues the same background session, which keeps what the earlier runs found"
 NOTE_RUNS_NO_SESSION = "a note runs no session: it takes no browser, no method and no session to reuse"
+UNTIL_HELP = (
+    "when the check ends, in words: the run that finds it true does the check one last time and switches it off"
+)
+UNTIL_CHECK_ONLY = (
+    "only a check takes an end condition: a reminder already switches off when it speaks, "
+    "and a note runs no session to judge one"
+)
+UNTIL_EMPTY = "an end condition cannot be empty: leave out --until for no end, or remove one with update --no-until"
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -65,11 +73,12 @@ def build_parser() -> argparse.ArgumentParser:
     when.add_argument("--at", metavar="TIME", help='once, at the first chance after a local time: "2026-10-23 09:00"')
     add.add_argument("--browser", action="store_true", help="let the check read through Claude in Chrome")
     add.add_argument("--reuse-session", action="store_true", help=REUSE_HELP)
+    add.add_argument("--until", metavar="CONDITION", help=UNTIL_HELP)
     add_configuration(add)
     add.add_argument("text", help="the request, complete enough for an agent with no other context")
 
     update = sub.add_parser(
-        "update", help="change the name, text, method, requirements, browser or session reuse of a check"
+        "update", help="change the name, text, method, requirements, browser, session reuse or end of a check"
     )
     update.add_argument("check_id", type=int)
     update.add_argument("--name")
@@ -77,6 +86,9 @@ def build_parser() -> argparse.ArgumentParser:
     add_configuration(update)
     update.add_argument("--browser", action=argparse.BooleanOptionalAction, default=None)
     update.add_argument("--reuse-session", action=argparse.BooleanOptionalAction, default=None, help=REUSE_HELP)
+    end = update.add_mutually_exclusive_group()
+    end.add_argument("--until", metavar="CONDITION", help=UNTIL_HELP)
+    end.add_argument("--no-until", action="store_true", help="remove the end condition: the check runs until removed")
 
     listing = sub.add_parser("list", help="the checks of this project and the system ones")
     listing.add_argument("--all", action="store_true", help="every scope, inactive checks included")
@@ -91,6 +103,9 @@ def build_parser() -> argparse.ArgumentParser:
     done = sub.add_parser("finish", help="record a run's outcome; the summary is read from stdin")
     done.add_argument("run_id", type=int)
     done.add_argument("--outcome", choices=[outcome.value for outcome in FINAL_OUTCOMES], required=True)
+    done.add_argument(
+        "--ended", action="store_true", help="the check's end condition holds: this run switches the check off"
+    )
 
     log = sub.add_parser("log", help="the runs, most recent first")
     log.add_argument("--check-id", type=int)
@@ -115,6 +130,7 @@ def check_view(conn: sqlite3.Connection, check: sqlite3.Row) -> Result:
         "name": check["name"],
         "scope": check["scope"],
         "schedule": describe(check),
+        "until": check["until"],
         "kind": check["kind"],
         "browser": bool(check["browser"]),
         "reuse_session": bool(check["reuse_session"]),
@@ -151,6 +167,17 @@ def schedule_columns(args: argparse.Namespace) -> tuple[Cadence, int | None, str
     return Cadence.DAILY, None, None, None
 
 
+def end_condition(until: str | None, kind: str) -> str | None:
+    """Check an `--until`: a condition in words, on a check only. None when it was not given."""
+    if until is None:
+        return None
+    if not until.strip():
+        raise PulseError(UNTIL_EMPTY)
+    if kind != Kind.CHECK:
+        raise PulseError(UNTIL_CHECK_ONLY)
+    return until.strip()
+
+
 def cmd_add(ctx: Context) -> Result:
     """Store a new check in this project or in the system scope."""
     text, name = ctx.args.text.strip(), ctx.args.name.strip()
@@ -164,11 +191,12 @@ def cmd_add(ctx: Context) -> Result:
     elif not method:
         msg = "a check is saved only once a trial run worked: pass --method with what worked"
         raise PulseError(msg)
+    until = end_condition(ctx.args.until, ctx.args.kind) or ""
     scope = ctx.project if ctx.args.scope == "project" else SYSTEM
     cadence, interval, due_at, cron = schedule_columns(ctx.args)
     cursor = ctx.conn.execute(
         "INSERT INTO checks (scope, name, text, cadence, interval_seconds, due_at, cron, kind, method, requires, "
-        "browser, reuse_session, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "until, browser, reuse_session, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             scope,
             name,
@@ -180,6 +208,7 @@ def cmd_add(ctx: Context) -> Result:
             ctx.args.kind,
             method,
             (ctx.args.requires or "").strip(),
+            until,
             int(ctx.args.browser),
             int(ctx.args.reuse_session),
             stamp(ctx.at),
@@ -209,8 +238,14 @@ def cmd_update(ctx: Context) -> Result:
         changes["browser"] = int(ctx.args.browser)
     if ctx.args.reuse_session is not None:
         changes["reuse_session"] = int(ctx.args.reuse_session)
+    until = end_condition(ctx.args.until, row["kind"])
+    if until is not None or ctx.args.no_until:
+        changes["until"] = until or ""
     if not changes:
-        msg = "nothing to change: pass at least one of --name, --text, --method, --requires, --browser, --reuse-session"
+        msg = (
+            "nothing to change: pass at least one of --name, --text, --method, --requires, --browser, "
+            "--reuse-session, --until, --no-until"
+        )
         raise PulseError(msg)
     if any(changes.get(column) == "" for column in ("name", "text")):
         msg = "the name and the text of a check cannot be empty"
@@ -266,6 +301,7 @@ def cmd_finish(ctx: Context) -> Result:
         outcome=ctx.args.outcome,
         summary=sys.stdin.read().strip(),
         at=ctx.at,
+        ended=ctx.args.ended,
     )
 
 

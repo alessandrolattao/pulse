@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS checks (
     kind             TEXT NOT NULL,
     method           TEXT NOT NULL DEFAULT '',
     requires         TEXT NOT NULL DEFAULT '',
+    until            TEXT NOT NULL DEFAULT '',
     browser          INTEGER NOT NULL DEFAULT 0,
     reuse_session    INTEGER NOT NULL DEFAULT 0,
     kept_session     TEXT,
@@ -39,7 +40,8 @@ CREATE TABLE IF NOT EXISTS runs (
     session_id      TEXT,
     seen            INTEGER NOT NULL DEFAULT 0,
     session_stopped INTEGER NOT NULL DEFAULT 0,
-    session_removed INTEGER NOT NULL DEFAULT 0
+    session_removed INTEGER NOT NULL DEFAULT 0,
+    ended           INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS runs_by_check ON runs (check_id, started_at);
 """
@@ -55,12 +57,14 @@ MIGRATIONS: dict[str, dict[str, str]] = {
         "requires": "TEXT NOT NULL DEFAULT ''",
         "reuse_session": "INTEGER NOT NULL DEFAULT 0",
         "kept_session": "TEXT",
+        "until": "TEXT NOT NULL DEFAULT ''",
     },
     "runs": {
         "session_id": "TEXT",
         "seen": "INTEGER NOT NULL DEFAULT 0",
         "session_removed": "INTEGER NOT NULL DEFAULT 0",
         "session_stopped": "INTEGER NOT NULL DEFAULT 0",
+        "ended": "INTEGER NOT NULL DEFAULT 0",
     },
 }
 """Columns added after the first version, for a db created before them."""

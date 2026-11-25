@@ -15,7 +15,7 @@ import importlib
 from typing import TYPE_CHECKING
 
 from pulse.config import ICON, TITLE
-from pulse.model import Outcome
+from pulse.model import Outcome, ended_line
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -93,18 +93,21 @@ def send_with_dbus_python(title: str, body: str) -> bool | None:
 SENDERS: tuple[Callable[[str, str], bool | None], ...] = (send_with_gio, send_with_dbus_python)
 
 
-def notify(config: Config, name: str, outcome: Outcome, summary: str) -> bool:
+def notify(config: Config, name: str, outcome: Outcome, summary: str, *, ended: str | None = None) -> bool:
     """Show a desktop notification and say whether it was delivered.
 
-    Nothing is sent when notifications are off, for an outcome that does not
+    `ended` is the end condition of the check, when this run ended it: such a
+    run always notifies, `ok` included, with the condition added. Nothing is
+    sent when notifications are off, for any other outcome that does not
     notify, or when the system Python has no D-Bus library. The first library
     found is the one used.
     """
-    if not config.notify or outcome not in LABELS:
+    if not config.notify or (ended is None and outcome not in LABELS):
         return False
-    title = f"{TITLE} · {name}{LABELS[outcome]}"
+    title = f"{TITLE} · {name}{LABELS.get(outcome, '')}"
+    body = summary if ended is None else f"{summary}\n{ended_line(ended)}"
     for send in SENDERS:
-        delivered = send(title, summary)
+        delivered = send(title, body)
         if delivered is not None:
             return delivered
     return False

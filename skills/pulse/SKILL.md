@@ -43,13 +43,21 @@ that the user picks an option instead of typing one.
    session?" Yes: each run sees what the earlier ones found, and can tell
    what changed. No: every run starts in a new session, knowing nothing of
    the earlier ones.
-5. **Save it once it works**, with what the trial proved:
+5. **Ask for its end**, when the request has one ("until the release",
+   "while the batch runs"): what exactly tells that it is over. Every run
+   judges it first, with the same tools as the check; the run that finds it
+   true does the check one last time, tells the user `ended: <condition>`
+   and switches the check off. Set it with `--until`, on a `check` only: a
+   reminder already switches off when it speaks, and a note has no session
+   to judge one.
+6. **Save it once it works**, with what the trial proved:
    - `--method`: the steps that worked, in order, with the exact commands,
      endpoints or pages, and how to tell `found` from `ok`;
    - `--requires`: each tool and login it depends on, with the command that
      checks or renews it;
    - `--browser` only if the user said yes;
-   - `--reuse-session` only if the user said yes.
+   - `--reuse-session` only if the user said yes;
+   - `--until "<when it ends>"` only for a check whose request has an end.
 
 A plain reminder with nothing to look into ("remind me tomorrow at 9 to call
 Marco") is a `note`: no trial, no method, no session. It is simply told to the
@@ -59,10 +67,10 @@ user when due.
 
 | What | Command |
 | --- | --- |
-| Save a check | `add --scope project\|system --kind check --name "<few words>" <schedule> --method "…" --requires "…" [--browser] [--reuse-session] "<text>"` |
-| Save a reminder (speaks once, when a condition holds) | same, with `--kind reminder` |
+| Save a check | `add --scope project\|system --kind check --name "<few words>" <schedule> --method "…" --requires "…" [--browser] [--reuse-session] [--until "<when it ends>"] "<text>"` |
+| Save a reminder (speaks once, when a condition holds) | same, with `--kind reminder` and no `--until` |
 | Save a note (just tell the user) | `add --scope … --kind note --name "…" <schedule> "<what to tell>"` |
-| Change what a check does or needs | `update <check_id> [--name …] [--text …] [--method …] [--requires …] [--browser\|--no-browser] [--reuse-session\|--no-reuse-session]` |
+| Change what a check does or needs | `update <check_id> [--name …] [--text …] [--method …] [--requires …] [--browser\|--no-browser] [--reuse-session\|--no-reuse-session] [--until "…"\|--no-until]` |
 | See what is watched | `list` (this project and the system scope), `list --all` |
 | Stop one | `remove <check_id>` (deactivates it; its log stays) |
 | How it went | `log [--check-id N] [--limit N] [--all]` |

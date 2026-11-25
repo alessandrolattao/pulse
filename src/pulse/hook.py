@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from pulse.clock import utcnow
 from pulse.config import TITLE, Config
 from pulse.db import connect
-from pulse.model import SYSTEM, Outcome
+from pulse.model import SYSTEM, Outcome, ended_line
 from pulse.project import project_of
 from pulse.schedule import claim
 from pulse.sessions import is_check_session, remove_finished, start
@@ -23,19 +23,23 @@ if TYPE_CHECKING:
 def notices(conn: sqlite3.Connection, project: str) -> list[str]:
     """Collect the finished runs in scope the user has not seen.
 
-    Everything but `ok` becomes a line; `ok` is only marked seen.
+    Everything but `ok` becomes a line, and so does the run that ended its
+    check, with the end condition added; any other `ok` is only marked seen.
     """
     rows = conn.execute(
-        "SELECT r.run_id, r.outcome, r.summary, c.name, c.check_id FROM runs r JOIN checks c USING (check_id) "
+        "SELECT r.run_id, r.outcome, r.summary, r.ended, c.name, c.check_id, c.until "
+        "FROM runs r JOIN checks c USING (check_id) "
         "WHERE r.seen = 0 AND r.outcome != ? AND c.scope IN (?, ?) ORDER BY r.finished_at, r.run_id",
         (Outcome.RUNNING, SYSTEM, project),
     ).fetchall()
     lines: list[str] = []
     for row in rows:
         conn.execute("UPDATE runs SET seen = 1 WHERE run_id = ?", (row["run_id"],))
-        if row["outcome"] != Outcome.OK:
-            name = row["name"] or f"check {row['check_id']}"
-            lines.append(f"{name} [{row['outcome']}]: {row['summary']}")
+        if row["outcome"] == Outcome.OK and not row["ended"]:
+            continue
+        name = row["name"] or f"check {row['check_id']}"
+        line = f"{name} [{row['outcome']}]: {row['summary']}"
+        lines.append(f"{line} · {ended_line(row['until'])}" if row["ended"] else line)
     return lines
 
 
